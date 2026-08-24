@@ -1,0 +1,141 @@
+generator client {
+  // Prisma 7's Rust-free client generator. The connection itself (and DATABASE_URL) now lives
+  // in prisma.config.ts, not here — see that file and lib/prisma.ts for the driver adapter setup.
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  // SQLite for local dev. Swap to "postgresql" when you're ready to deploy (update prisma.config.ts
+  // and the adapter in lib/prisma.ts + prisma/seed.ts to match).
+  // Note: SQLite doesn't support native array or enum-array columns in Prisma, so `tags` below
+  // is stored as a comma-separated string rather than String[].
+  provider = "sqlite"
+}
+
+enum MealType {
+  DINNER
+  BREAKFAST
+  LUNCH // home-made lunch library — see SchoolLunchDay for the school cafeteria calendar
+}
+
+enum SlotType {
+  KID_PICK
+  PARENT_PICK
+  WILDCARD
+  BIRTHDAY
+  BREAKFAST
+  LUNCH
+}
+
+enum FamilyMemberType {
+  KID
+  PARENT
+}
+
+model Meal {
+  id                String           @id @default(cuid())
+  name              String
+  photoUrl          String?
+  mealType          MealType
+  tags              String // comma-separated, e.g. "kid-favorite,quick"
+  isBirthdaySpecial Boolean          @default(false)
+  repeatable        Boolean          @default(false) // true for breakfasts that can repeat within a week
+  ingredients       MealIngredient[]
+  planSlots         PlanSlot[]
+  createdAt         DateTime         @default(now())
+}
+
+// A reusable, curated set of interchangeable options (e.g. "vegetable_side" = green beans /
+// broccoli / salad / edamame). Multiple meals' MealIngredient rows point at the same group
+// instead of each meal redefining its own copy of the same substitute list.
+model SubstituteGroup {
+  id          String             @id @default(cuid())
+  name        String             @unique // e.g. "vegetable_side", "starch_potato"
+  options     SubstituteOption[]
+  ingredients MealIngredient[]
+}
+
+model SubstituteOption {
+  id       String          @id @default(cuid())
+  group    SubstituteGroup @relation(fields: [groupId], references: [id])
+  groupId  String
+  name     String
+  quantity Float?
+  unit     String?
+}
+
+model MealIngredient {
+  id                String           @id @default(cuid())
+  meal              Meal             @relation(fields: [mealId], references: [id])
+  mealId            String
+  name              String
+  quantity          Float
+  unit              String
+  role              String? // e.g. "protein", "vegetable_side", "starch_side", "sandwich", "soup"
+  swappable         Boolean          @default(false)
+  optional          Boolean          @default(false) // true if not included by default (e.g. "add toast?")
+  substituteGroup   SubstituteGroup? @relation(fields: [substituteGroupId], references: [id])
+  substituteGroupId String?
+}
+
+model WeeklyPlan {
+  id           String             @id @default(cuid())
+  weekStart    DateTime
+  slots        PlanSlot[]
+  shoppingList ShoppingListItem[]
+  confirmedAt  DateTime? // set when a parent locks the week in
+}
+
+// The auto-generated, editable shopping list for a given week. Regenerated from the
+// week's picks each time consolidation runs, except for lines a parent has hand-edited
+// (edited: true), which are left alone so a re-run doesn't clobber a manual fix.
+model ShoppingListItem {
+  id           String     @id @default(cuid())
+  weeklyPlan   WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+  weeklyPlanId String
+  name         String
+  quantity     Float
+  unit         String
+  edited       Boolean    @default(false)
+}
+
+model PlanSlot {
+  id                 String     @id @default(cuid())
+  weeklyPlan         WeeklyPlan @relation(fields: [weeklyPlanId], references: [id])
+  weeklyPlanId       String
+  slotType           SlotType
+  pickedBy           String? // display label — a family member's actual name (or "Wildcard")
+  meal               Meal?      @relation(fields: [mealId], references: [id])
+  mealId             String?
+  overriddenByParent Boolean    @default(false)
+  chosenSubstitutes  String? // JSON string map: { mealIngredientId: chosenOptionName }
+  weekday            Int? // 0=Mon..4=Fri — used by LUNCH slots only, one per school day
+  eatingAtSchool     Boolean    @default(false) // true = cafeteria lunch that day, mealId stays null
+}
+
+// A family member's profile — kids get their own row so the picker can use real names
+// and (later) preference-based flags/recommendations; the fun-fact fields are freeform
+// for now (see MVP-SPEC "Family member profiles"). Parents share one combined profile
+// screen but still get individual rows here so both parents' info can be recorded.
+model FamilyMember {
+  id                    String           @id @default(cuid())
+  name                  String
+  memberType            FamilyMemberType
+  favoriteMealToEat     String?
+  favoriteMealToCook    String?
+  afterDinnerChore      String?
+  favoriteSaladDressing String?
+  sortOrder             Int              @default(0) // controls kid-slot order in the picker
+  createdAt             DateTime         @default(now())
+}
+
+// The school cafeteria's actual published menu for a given calendar date — separate from
+// the home-made Meal library because it's date-specific, not a reusable pick. Populated by
+// importing the school's nutrition calendar (see prisma/seed-school-lunch.ts).
+model SchoolLunchDay {
+  id     String   @id @default(cuid())
+  date   DateTime @unique
+  menu   String
+  source String? // where this came from, e.g. "HISD Field Elementary nutrition calendar"
+}
