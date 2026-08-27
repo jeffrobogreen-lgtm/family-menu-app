@@ -53,10 +53,17 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     );
   }
 
+  // Captured as a plain string (not `plan.id` directly) so this server-action closure
+  // doesn't reference `plan` itself — TypeScript can't carry the `if (!plan) return` null
+  // check above into a nested function body, since `plan` could in principle be
+  // reassigned before the closure runs. `planId` is a primitive, so there's nothing left
+  // to narrow.
+  const planId = plan.id;
+
   async function confirm() {
     "use server";
-    await confirmWeeklyPlan(plan.id);
-    redirect(`/plan/${plan.id}/review`);
+    await confirmWeeklyPlan(planId);
+    redirect(`/plan/${planId}/review`);
   }
 
   const dinnerSlots = plan.slots.filter((s) => s.slotType !== "BREAKFAST" && s.slotType !== "LUNCH");
