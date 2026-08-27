@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 // PLACEHOLDER DATA — a live import of Field Elementary's (Houston ISD) real cafeteria
 // calendar was NOT achieved. Both of the school district's menu systems (Nutrislice and
@@ -19,7 +19,7 @@ import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 // This script ADDS/UPDATES rows (upsert by date) rather than wiping the table, so it's safe
 // to run alongside prisma/seed.ts without clobbering real imported data later.
 
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 // Finds next Monday..Friday (or this week's, if today is a weekday) — same logic as

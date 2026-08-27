@@ -19,6 +19,20 @@
 - The swap happens at pick-time in the picker UI — tap a substitute chip instead of the default.
 - Shopping-list generation resolves to whichever substitute was actually chosen for that meal-instance, never the meal's default ingredient.
 
+## Deployment — decided architecture (2026-08-25)
+
+Code lives in a public GitHub repo (`github.com/jeffrobogreen-lgtm/family-menu-app`) and deploys to
+Vercel, which auto-deploys on every push to `main`. Both are free-tier: Vercel's Hobby plan (personal,
+non-commercial use — see README) and GitHub's free plan (unlimited private/public repos and
+collaborators these days). Neither should need a paid upgrade for a personal single-household app.
+
+Switching hosting meant switching the database: the app originally used a local SQLite file, which
+works fine for local dev but not for Vercel's serverless functions (no shared, persistent disk across
+invocations). It now runs on Postgres via Vercel's "Prisma Postgres" marketplace database instead
+(`@prisma/adapter-pg`, corrected 2026-08-26 from an initial, incorrect assumption that the attached
+database was Neon) — see the README's "Database" section for the details and the `db push`-not-migrations
+tradeoff that comes with it.
+
 ## Walmart integration — decided architecture (2026-08-24)
 
 This app is a **Walmart companion**, not a Walmart client. There is no Walmart consumer API to build against (their developer APIs are for marketplace sellers, not a shopper's own account/cart/order-history), so the app itself stays entirely Walmart-agnostic — it never stores Walmart credentials, never calls a Walmart API, and never runs unattended against walmart.com.

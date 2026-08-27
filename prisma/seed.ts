@@ -1,9 +1,12 @@
 import "dotenv/config";
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
-// Prisma 7's Rust-free client needs an explicit driver adapter, same as lib/prisma.ts.
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+// Prisma 7's Rust-free client needs an explicit driver adapter, same as lib/prisma.ts —
+// Postgres via Vercel's "Prisma Postgres" product (@prisma/adapter-pg, corrected 2026-08-26
+// from an earlier, wrong assumption that this was a Neon database — see schema.prisma's
+// datasource comment).
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {

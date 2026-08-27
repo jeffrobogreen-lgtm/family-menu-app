@@ -6,41 +6,38 @@
    ```
    npm install
    ```
+   (this also runs `prisma generate` automatically via the `postinstall` script)
 
-2. Copy the env file and keep the default SQLite path for local dev:
+2. Copy the env file and fill in `DATABASE_URL` with your Prisma Postgres connection string
+   (see "Database" below — as of 2026-08-25 this app runs on Postgres, not local SQLite):
    ```
    cp .env.example .env
    ```
 
-3. Run the migration (creates/updates `dev.db` from `prisma/schema.prisma`). **If you already
-   have a `dev.db` from before 2026-08-24**, you'll need to run this again to pick up the new
-   `FamilyMember`, `SchoolLunchDay`, and `PlanSlot`/`Meal` changes described below:
+3. Push the schema to your database (creates/updates all tables from `prisma/schema.prisma`).
+   This project uses `prisma db push` rather than tracked migrations — see "Database" below
+   for why, and re-run this any time the schema changes:
    ```
-   npm run prisma:migrate
-   ```
-
-4. Generate the Prisma client (not always triggered automatically by the migrate step):
-   ```
-   npx prisma generate
+   npm run db:push
    ```
 
-5. Seed the meal library (safe to re-run any time — it resets meal/substitution data first):
+4. Seed the meal library (safe to re-run any time — it resets meal/substitution data first):
    ```
    npm run seed
    ```
 
-6. Seed a few placeholder school-lunch-calendar entries (see "School lunches" below for why
+5. Seed a few placeholder school-lunch-calendar entries (see "School lunches" below for why
    these are placeholders, not the real Field Elementary menu):
    ```
    npm run seed:school-lunch
    ```
 
-7. Start the dev server:
+6. Start the dev server:
    ```
    npm run dev
    ```
 
-8. Optional but recommended before your first real family test: go to `/family` and enter
+7. Optional but recommended before your first real family test: go to `/family` and enter
    your kids' real names (and anything fun you want in their profiles) — the picker uses
    whatever's there, falling back to "Kid 1"/"Kid 2" if the list is empty.
 
@@ -56,6 +53,35 @@
 - `app/plan/new/` — the family picker: `WeekPicker` orchestrates `DinnerPicker` → `BreakfastPicker` → `LunchPicker`
 - `app/plan/[id]/review/` — parent review screen: picks (by meal type), editable shopping list, lock-in, Walmart export
 - `public/meal-photos/` — kid-friendly SVG illustrations for every meal (see that folder's README)
+
+## Database
+
+This app runs on Postgres via Vercel's [Prisma Postgres](https://vercel.com/marketplace/prisma)
+marketplace database, connected through Prisma 7's driver-adapter model (`@prisma/adapter-pg` — the
+standard node-postgres driver adapter, since Prisma Postgres hands out a plain `postgres://`
+connection string — see `lib/prisma.ts` and `prisma/seed.ts`). It was originally built against a
+local SQLite file for convenience during early development, then switched over on 2026-08-25 so it
+could run on Vercel — a serverless function can't rely on a file on disk the way a long-running local
+dev server can, since there's no shared, persistent filesystem across invocations. (The switch was
+briefly coded against Neon's serverless driver instead — corrected on 2026-08-26 once the actual
+attached database turned out to be Vercel's own Prisma Postgres product, not Neon.)
+
+Attaching the database in Vercel sets three environment variables — `DATABASE_URL`, `POSTGRES_URL`,
+and `PRISMA_DATABASE_URL` — all pointing at the same database. This app only reads `DATABASE_URL`.
+
+**Schema sync uses `npm run db:push` (`prisma db push`), not tracked migrations.** For a
+single-developer personal project without a migration history to protect, `db push` is simpler and
+safer to hand-maintain than committing migration SQL that's never been run against a live database.
+If this ever grows into something with multiple contributors or environments where you want a
+reviewable migration history, switch to `npm run prisma:migrate` (`prisma migrate dev`) instead —
+the schema and Prisma config already support it, you'd just start generating migration files from
+here on.
+
+**Local dev and production point at the same database** by default (whatever `DATABASE_URL` you put
+in your `.env`). For a personal single-household app that's a reasonable simplification — but if you
+ever want to test schema changes without touching real family data, you can create a second Prisma
+Postgres database (in Vercel's Storage tab, or at [console.prisma.io](https://console.prisma.io)) and
+point your local `.env` at that one's connection string instead of production's.
 
 ## Status
 
@@ -85,6 +111,6 @@ Architecture decision (see `MVP-SPEC.md`): this app stays a Walmart-agnostic sho
 ## Prisma 7 / Tailwind v4 / Next 16 migration notes
 
 If you ever rebuild `node_modules` from scratch and hit errors again, these are the three fixes already in place — nothing you need to redo, just context for why the code looks the way it does:
-- **Prisma 7** moved the datasource connection out of `schema.prisma` into `prisma.config.ts`, and dropped the old built-in query engine in favor of an explicit driver adapter (`@prisma/adapter-better-sqlite3` here). See `prisma.config.ts`, `lib/prisma.ts`, and `prisma/seed.ts`. After `prisma migrate dev`, you may need to run `npx prisma generate` manually — it isn't always triggered automatically.
+- **Prisma 7** moved the datasource connection out of `schema.prisma` into `prisma.config.ts`, and dropped the old built-in query engine in favor of an explicit driver adapter (`@prisma/adapter-pg` here, the standard node-postgres driver, talking to Vercel's Prisma Postgres database — see "Database" above for why it's Postgres and not SQLite). See `prisma.config.ts`, `lib/prisma.ts`, and `prisma/seed.ts`. `npm install` now runs `prisma generate` automatically via the `postinstall` script, so you shouldn't need to run it by hand.
 - **Tailwind v4** replaced the old `@tailwind` directives and `tailwindcss`+`autoprefixer` PostCSS setup with `@import "tailwindcss"` and the `@tailwindcss/postcss` plugin. `tailwind.config.ts` still works via the `@config` directive in `app/globals.css` — no need to convert to CSS-based theming.
 - **Next.js 16** made route `params` a `Promise` — see `app/plan/[id]/review/page.tsx`.

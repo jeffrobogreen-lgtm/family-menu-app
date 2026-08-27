@@ -1,12 +1,17 @@
 import "dotenv/config";
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
+// Postgres via Vercel's "Prisma Postgres" marketplace database (switched from local SQLite
+// on 2026-08-24 — see schema.prisma's datasource comment). Prisma Postgres hands out a
+// plain postgres:// connection string, so the standard node-postgres driver adapter
+// (@prisma/adapter-pg) is the right one here — no WebSocket polyfill needed, that was only
+// required for Neon's serverless driver, which this app briefly (and incorrectly) assumed
+// was the database Vercel had provisioned. Corrected on 2026-08-26 once the dashboard
+// showed the database is actually Vercel's own "Prisma Postgres" product.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Prisma 7's Rust-free client needs an explicit driver adapter — see prisma.config.ts
-// and prisma/schema.prisma for the rest of the Prisma 7 migration.
-const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL! });
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 

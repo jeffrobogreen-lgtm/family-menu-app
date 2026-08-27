@@ -6,11 +6,19 @@ generator client {
 }
 
 datasource db {
-  // SQLite for local dev. Swap to "postgresql" when you're ready to deploy (update prisma.config.ts
-  // and the adapter in lib/prisma.ts + prisma/seed.ts to match).
-  // Note: SQLite doesn't support native array or enum-array columns in Prisma, so `tags` below
-  // is stored as a comma-separated string rather than String[].
-  provider = "sqlite"
+  // Postgres, via Vercel's "Prisma Postgres" marketplace database (see lib/prisma.ts,
+  // prisma/seed.ts, and prisma.config.ts for the @prisma/adapter-pg driver adapter setup)
+  // — switched from local SQLite on 2026-08-24 to deploy on Vercel, where a serverless
+  // function can't rely on a local file for its database. DATABASE_URL comes from Vercel's
+  // Storage tab once a Prisma Postgres database is attached to the project (see
+  // MVP-SPEC.md's deployment notes). Corrected 2026-08-26: this was initially coded
+  // against Neon before the dashboard confirmed the actual product is Prisma Postgres,
+  // which uses a plain postgres:// string and the standard @prisma/adapter-pg driver
+  // rather than Neon's WebSocket-based serverless driver.
+  // Note: `tags` below stays a comma-separated string rather than String[] — Postgres does
+  // support native arrays, but this app's code already reads/writes tags as CSV everywhere,
+  // and switching the column type isn't part of this migration.
+  provider = "postgresql"
 }
 
 enum MealType {
