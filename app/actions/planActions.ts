@@ -19,7 +19,7 @@ type BreakfastPick = {
 
 type LunchPick = {
   weekday: number; // 0=Mon..4=Fri
-  pickedBy: string; // e.g. "Monday"
+  kidName: string; // which kid this lunch is for — each kid gets their own 5 slots
   eatingAtSchool: boolean;
   mealId: string | null; // null when eatingAtSchool
 };
@@ -29,6 +29,7 @@ export async function createWeeklyPlan(
   dinners: DinnerPick[],
   breakfasts: BreakfastPick[],
   lunches: LunchPick[],
+  fruitMealIds: string[] = [],
 ) {
   const plan = await prisma.weeklyPlan.create({
     data: {
@@ -48,10 +49,15 @@ export async function createWeeklyPlan(
           })),
           ...lunches.map((pick) => ({
             slotType: "LUNCH" as const,
-            pickedBy: pick.pickedBy,
+            pickedBy: pick.kidName,
             mealId: pick.eatingAtSchool ? null : pick.mealId,
             eatingAtSchool: pick.eatingAtSchool,
             weekday: pick.weekday,
+          })),
+          ...fruitMealIds.map((mealId) => ({
+            slotType: "FRUIT" as const,
+            pickedBy: "Fresh Fruit",
+            mealId,
           })),
         ],
       },
