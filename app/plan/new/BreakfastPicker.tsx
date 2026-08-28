@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MealPhoto } from "@/app/components/MealPhoto";
+import { FavoriteStar } from "@/app/components/FavoriteStar";
 import type { Meal } from "./DinnerPicker";
 
 export type BreakfastPickOut = {
@@ -23,8 +24,27 @@ export function BreakfastPicker({
   const [step, setStep] = useState(0);
   const [picks, setPicks] = useState<(string | null)[]>(Array(PICK_COUNT).fill(null));
 
+  // See DinnerPicker.tsx for why this is local, optimistic state.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
+    () => new Set(meals.filter((m) => m.isFavorite).map((m) => m.id)),
+  );
+
   const currentMealId = picks[step];
   const allPicked = picks.every((p) => p !== null);
+
+  const sortedMeals = useMemo(
+    () => [...meals].sort((a, b) => Number(favoriteIds.has(b.id)) - Number(favoriteIds.has(a.id))),
+    [meals, favoriteIds],
+  );
+
+  function toggleFavorite(mealId: string, next: boolean) {
+    setFavoriteIds((prev) => {
+      const nextSet = new Set(prev);
+      if (next) nextSet.add(mealId);
+      else nextSet.delete(mealId);
+      return nextSet;
+    });
+  }
 
   function pickMeal(meal: Meal) {
     setPicks((prev) => {
@@ -54,9 +74,12 @@ export function BreakfastPicker({
     <div>
       <div className="flex gap-1 mb-6">
         {picks.map((_, i) => (
-          <div
+          <button
             key={i}
-            className={`h-2 flex-1 rounded-full ${i <= step ? "bg-kitchen-mustard" : "bg-kitchen-ink/10"}`}
+            onClick={() => setStep(i)}
+            aria-label={`Go to breakfast pick ${i + 1}`}
+            aria-current={i === step}
+            className={`h-2 flex-1 rounded-full transition-colors ${i <= step ? "bg-kitchen-mustard" : "bg-kitchen-ink/10"} hover:opacity-80`}
           />
         ))}
       </div>
@@ -70,15 +93,21 @@ export function BreakfastPicker({
 
       {!currentMealId ? (
         <div className="grid grid-cols-2 gap-3">
-          {meals.map((meal) => (
-            <button
-              key={meal.id}
-              onClick={() => pickMeal(meal)}
-              className="rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-mustard transition-colors"
-            >
-              <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
-              <div className="font-display font-semibold p-4">{meal.name}</div>
-            </button>
+          {sortedMeals.map((meal) => (
+            <div key={meal.id} className="relative">
+              <button
+                onClick={() => pickMeal(meal)}
+                className="w-full rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-mustard transition-colors"
+              >
+                <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
+                <div className="font-display font-semibold p-4 pr-8">{meal.name}</div>
+              </button>
+              <FavoriteStar
+                mealId={meal.id}
+                isFavorite={favoriteIds.has(meal.id)}
+                onToggle={toggleFavorite}
+              />
+            </div>
           ))}
         </div>
       ) : (

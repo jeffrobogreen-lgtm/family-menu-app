@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { MealPhoto } from "@/app/components/MealPhoto";
+import { FavoriteStar } from "@/app/components/FavoriteStar";
 
 type SubstituteOption = { id: string; name: string };
 
@@ -19,6 +20,7 @@ export type Meal = {
   name: string;
   photoUrl: string | null;
   tags: string;
+  isFavorite: boolean;
   ingredients: Ingredient[];
 };
 
@@ -65,10 +67,33 @@ export function DinnerPicker({
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState<Record<string, Selection>>({});
 
+  // Local, optimistic favorite set — seeded from the page-load snapshot in `meals`,
+  // then updated instantly on tap while the server action persists in the background
+  // (see FavoriteStar.tsx). This component now stays mounted across phase switches
+  // (see WeekPicker.tsx), so this survives navigating away and back.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
+    () => new Set(meals.filter((m) => m.isFavorite).map((m) => m.id)),
+  );
+
   const slot = SLOTS[step];
   const currentSelection = selections[slot.key];
   const selectedMeal = meals.find((m) => m.id === currentSelection?.mealId);
   const allSlotsPicked = SLOTS.every((s) => selections[s.key]);
+
+  // Favorites float to the top of the grid so they're easy to find as the library grows.
+  const sortedMeals = useMemo(
+    () => [...meals].sort((a, b) => Number(favoriteIds.has(b.id)) - Number(favoriteIds.has(a.id))),
+    [meals, favoriteIds],
+  );
+
+  function toggleFavorite(mealId: string, next: boolean) {
+    setFavoriteIds((prev) => {
+      const nextSet = new Set(prev);
+      if (next) nextSet.add(mealId);
+      else nextSet.delete(mealId);
+      return nextSet;
+    });
+  }
 
   function pickMeal(meal: Meal) {
     setSelections((prev) => ({
@@ -125,12 +150,17 @@ export function DinnerPicker({
 
   return (
     <div>
-      {/* progress: one segment per slot, filled as picks are made */}
+      {/* progress: one segment per slot, filled as picks are made — click any segment
+          to jump straight to that slot, in either direction, regardless of what's
+          been picked yet (e.g. a family member who has to leave can pick out of order). */}
       <div className="flex gap-1 mb-6">
         {SLOTS.map((s, i) => (
-          <div
+          <button
             key={s.key}
-            className={`h-2 flex-1 rounded-full ${i <= step ? "bg-kitchen-tomato" : "bg-kitchen-ink/10"}`}
+            onClick={() => setStep(i)}
+            aria-label={`Go to ${s.label}`}
+            aria-current={i === step}
+            className={`h-2 flex-1 rounded-full transition-colors ${i <= step ? "bg-kitchen-tomato" : "bg-kitchen-ink/10"} hover:opacity-80`}
           />
         ))}
       </div>
@@ -139,15 +169,21 @@ export function DinnerPicker({
 
       {!currentSelection ? (
         <div className="grid grid-cols-2 gap-3">
-          {meals.map((meal) => (
-            <button
-              key={meal.id}
-              onClick={() => pickMeal(meal)}
-              className="rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-tomato transition-colors"
-            >
-              <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
-              <div className="font-display font-semibold p-4">{meal.name}</div>
-            </button>
+          {sortedMeals.map((meal) => (
+            <div key={meal.id} className="relative">
+              <button
+                onClick={() => pickMeal(meal)}
+                className="w-full rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-tomato transition-colors"
+              >
+                <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
+                <div className="font-display font-semibold p-4 pr-8">{meal.name}</div>
+              </button>
+              <FavoriteStar
+                mealId={meal.id}
+                isFavorite={favoriteIds.has(meal.id)}
+                onToggle={toggleFavorite}
+              />
+            </div>
           ))}
         </div>
       ) : (

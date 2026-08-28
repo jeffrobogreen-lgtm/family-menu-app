@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MealPhoto } from "@/app/components/MealPhoto";
+import { FavoriteStar } from "@/app/components/FavoriteStar";
 import type { Meal } from "./DinnerPicker";
 
 export type LunchPickOut = {
@@ -43,6 +44,25 @@ export function LunchPicker({
   const [step, setStep] = useState(0);
   const [picks, setPicks] = useState<DayPick[]>(Array(totalDaySteps).fill(null));
   const [fruitPicks, setFruitPicks] = useState<Set<string>>(new Set());
+
+  // See DinnerPicker.tsx for why this is local, optimistic state.
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(
+    () => new Set(meals.filter((m) => m.isFavorite).map((m) => m.id)),
+  );
+
+  const sortedMeals = useMemo(
+    () => [...meals].sort((a, b) => Number(favoriteIds.has(b.id)) - Number(favoriteIds.has(a.id))),
+    [meals, favoriteIds],
+  );
+
+  function toggleFavorite(mealId: string, next: boolean) {
+    setFavoriteIds((prev) => {
+      const nextSet = new Set(prev);
+      if (next) nextSet.add(mealId);
+      else nextSet.delete(mealId);
+      return nextSet;
+    });
+  }
 
   const onFruitStep = step >= totalDaySteps;
   const kidIndex = onFruitStep ? -1 : Math.floor(step / WEEKDAYS.length);
@@ -103,9 +123,12 @@ export function LunchPicker({
     <div>
       <div className="flex gap-1 mb-6">
         {Array.from({ length: totalSteps }).map((_, i) => (
-          <div
+          <button
             key={i}
-            className={`h-2 flex-1 rounded-full ${i <= step ? "bg-kitchen-sage" : "bg-kitchen-ink/10"}`}
+            onClick={() => setStep(i)}
+            aria-label={`Go to step ${i + 1}`}
+            aria-current={i === step}
+            className={`h-2 flex-1 rounded-full transition-colors ${i <= step ? "bg-kitchen-sage" : "bg-kitchen-ink/10"} hover:opacity-80`}
           />
         ))}
       </div>
@@ -171,15 +194,21 @@ export function LunchPicker({
               <div>
                 <div className="text-sm text-kitchen-ink/60 mb-2">...or pack from home:</div>
                 <div className="grid grid-cols-2 gap-3">
-                  {meals.map((meal) => (
-                    <button
-                      key={meal.id}
-                      onClick={() => chooseMeal(meal)}
-                      className="rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-sage transition-colors"
-                    >
-                      <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
-                      <div className="font-display font-semibold p-4">{meal.name}</div>
-                    </button>
+                  {sortedMeals.map((meal) => (
+                    <div key={meal.id} className="relative">
+                      <button
+                        onClick={() => chooseMeal(meal)}
+                        className="w-full rounded-card border-2 border-kitchen-ink/10 bg-white overflow-hidden text-left hover:border-kitchen-sage transition-colors"
+                      >
+                        <MealPhoto src={meal.photoUrl} alt={meal.name} className="h-24 w-full" />
+                        <div className="font-display font-semibold p-4 pr-8">{meal.name}</div>
+                      </button>
+                      <FavoriteStar
+                        mealId={meal.id}
+                        isFavorite={favoriteIds.has(meal.id)}
+                        onToggle={toggleFavorite}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
