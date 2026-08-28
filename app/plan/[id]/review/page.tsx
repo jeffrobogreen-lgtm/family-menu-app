@@ -66,11 +66,18 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     redirect(`/plan/${planId}/review`);
   }
 
-  const dinnerSlots = plan.slots.filter((s) => s.slotType !== "BREAKFAST" && s.slotType !== "LUNCH");
+  const dinnerSlots = plan.slots.filter(
+    (s) => s.slotType !== "BREAKFAST" && s.slotType !== "LUNCH" && s.slotType !== "FRUIT",
+  );
   const breakfastSlots = plan.slots.filter((s) => s.slotType === "BREAKFAST");
+  // Sorted kid-major (matching the picker's order) so each kid's five days stay grouped.
   const lunchSlots = plan.slots
     .filter((s) => s.slotType === "LUNCH")
-    .sort((a, b) => (a.weekday ?? 0) - (b.weekday ?? 0));
+    .sort((a, b) => {
+      const byKid = (a.pickedBy ?? "").localeCompare(b.pickedBy ?? "");
+      return byKid !== 0 ? byKid : (a.weekday ?? 0) - (b.weekday ?? 0);
+    });
+  const fruitSlots = plan.slots.filter((s) => s.slotType === "FRUIT");
 
   return (
     <main className="max-w-xl mx-auto px-4 py-8">
@@ -142,7 +149,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm text-kitchen-ink/50">
                 {slot.weekday !== null && slot.weekday !== undefined
-                  ? WEEKDAY_LABELS[slot.weekday]
+                  ? `${slot.pickedBy} — ${WEEKDAY_LABELS[slot.weekday]}`
                   : slot.pickedBy}
               </span>
               {slot.eatingAtSchool ? (
@@ -174,6 +181,22 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           </li>
         ))}
       </ul>
+
+      {fruitSlots.length > 0 && (
+        <>
+          <h2 className="font-display text-xl font-semibold mb-3">Fresh Fruit This Week 🍓</h2>
+          <ul className="flex flex-wrap gap-2 mb-8">
+            {fruitSlots.map((slot) => (
+              <li
+                key={slot.id}
+                className="rounded-full bg-white border-2 border-kitchen-ink/10 px-4 py-2 font-display font-semibold text-sm"
+              >
+                {slot.meal?.name}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <h2 className="font-display text-xl font-semibold mb-3">Shopping List 🧾</h2>
       <ShoppingListEditor items={plan.shoppingList} locked={!!plan.confirmedAt} />
