@@ -761,18 +761,63 @@ async function main() {
       tags: "kid-favorite,quick",
       photoUrl:
         "https://i5.walmartimages.com/dfw/7e496735-1ebe/k2-_2e967c47-7572-4f0a-b4f0-f77728574b7d.v1.jpg",
+      // Corrected 2026-08-28 — this is meant to be baked sheet-pan-slider style (the whole
+      // beef layer baked as one sheet-pan-sized patty under a full tray of Hawaiian rolls,
+      // finished with a butter/sesame glaze), not individually-formed burger patties on
+      // regular slider buns. Also added starch/veggie sides — every dinner should have one
+      // per the "all sides and vegetables selectable" change from the last round; this one
+      // had been missed since it didn't have a side in its original recipe.
       ingredients: {
         create: [
-          { name: "ground beef", quantity: 1, unit: "lb", role: "protein", swappable: false },
-          { name: "slider buns", quantity: 8, unit: "each", role: "bread", swappable: false },
-          { name: "sliced cheddar cheese", quantity: 4, unit: "each", role: "cheese", swappable: false },
+          { name: "ground beef", quantity: 2, unit: "lb", role: "protein", swappable: false },
+          { name: "Hawaiian rolls", quantity: 12, unit: "each", role: "bread", swappable: false },
           {
-            name: "pickles and ketchup",
+            name: "sliced cheddar cheese",
+            quantity: 0.5,
+            unit: "lb",
+            role: "cheese",
+            swappable: false,
+          },
+          {
+            name: "onion, thinly sliced and sauteed",
+            quantity: 1,
+            unit: "each",
+            role: "topping",
+            swappable: false,
+            optional: true,
+          },
+          {
+            name: "melted butter and sesame seed topping",
+            quantity: 2,
+            unit: "tbsp",
+            role: "topping",
+            swappable: false,
+          },
+          {
+            name: "pickles, ketchup, and mustard",
             quantity: 0.25,
             unit: "cup",
             role: "topping",
             swappable: false,
             optional: true,
+          },
+          {
+            name: "french fries",
+            quantity: 2,
+            unit: "cup",
+            role: "starch_side",
+            swappable: true,
+            optional: true,
+            substituteGroupId: starchSide.id,
+          },
+          {
+            name: "corn",
+            quantity: 1,
+            unit: "cup",
+            role: "vegetable_side",
+            swappable: true,
+            optional: true,
+            substituteGroupId: vegetableSide.id,
           },
         ],
       },

@@ -53,6 +53,8 @@ model Meal {
   tags              String // comma-separated, e.g. "kid-favorite,quick"
   isBirthdaySpecial Boolean          @default(false)
   repeatable        Boolean          @default(false) // true for breakfasts that can repeat within a week
+  isFavorite        Boolean          @default(false) // added 2026-08-28 — starred in the picker so it's
+  // easy to find as the meal library grows; sorted to the front of each picker's grid.
   ingredients       MealIngredient[]
   planSlots         PlanSlot[]
   createdAt         DateTime         @default(now())
