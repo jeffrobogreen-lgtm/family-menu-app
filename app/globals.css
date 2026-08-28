@@ -1,13 +1,25 @@
 @config "../tailwind.config.ts";
 @import "tailwindcss";
 
-/* A few small "fun family task, not a chore" design touches: a soft dotted texture
-   instead of a flat background, gentle motion on interactive elements, and a
-   friendlier default focus ring than the browser's harsh blue outline. */
+/* A few small "fun family task, not a chore" design touches: a textured background
+   instead of a flat one, gentle motion on interactive elements, and a friendlier
+   default focus ring than the browser's harsh blue outline. */
 
+/* Background texture added 2026-08-27, from the same wood-grain photo used on the
+   user's other project (Match Day Weekly). It's a warm dark red on its own — too dark
+   to sit directly behind body text (kitchen-ink is a near-black green, meant for a
+   light background) — so it's layered under a mostly-opaque kitchen-bg tint. That
+   keeps every existing text color legible while still letting the warm tone and
+   grain show through faintly, especially in the gaps around the white content cards.
+   To make the texture more visible, lower the 0.88 opacity below; to remove it
+   entirely, delete the url(...) layer and go back to a solid kitchen-bg. */
 body {
-  background-image: radial-gradient(circle, rgba(35, 50, 41, 0.06) 1px, transparent 1px);
-  background-size: 22px 22px;
+  background-image:
+    linear-gradient(rgba(242, 245, 239, 0.88), rgba(242, 245, 239, 0.88)),
+    url("/background/kitchen-texture.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 * {
