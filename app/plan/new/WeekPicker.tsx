@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createWeeklyPlan } from "@/app/actions/planActions";
 import { DinnerPicker, type DinnerPickOut, type Meal } from "./DinnerPicker";
 import { BreakfastPicker, type BreakfastPickOut } from "./BreakfastPicker";
-import { LunchPicker, type LunchPickOut } from "./LunchPicker";
+import { LunchPicker, type LunchPickOut, type FruitMeal } from "./LunchPicker";
 
 type Phase = "dinners" | "breakfasts" | "lunches";
 
@@ -18,12 +18,14 @@ export function WeekPicker({
   dinnerMeals,
   breakfastMeals,
   lunchMeals,
+  fruitMeals,
   kidNames,
   schoolLunchMenus,
 }: {
   dinnerMeals: Meal[];
   breakfastMeals: Meal[];
   lunchMeals: Meal[];
+  fruitMeals: FruitMeal[];
   kidNames: string[];
   schoolLunchMenus: Record<number, string | undefined>;
 }) {
@@ -42,11 +44,17 @@ export function WeekPicker({
     setPhase("lunches");
   }
 
-  async function handleLunchesDone(lunchPicks: LunchPickOut[]) {
+  async function handleLunchesDone(lunchPicks: LunchPickOut[], fruitMealIds: string[]) {
     setSubmitting(true);
     // createWeeklyPlan ends with redirect() — Next.js's server-action machinery
     // intercepts that and navigates the client automatically, so we just await it.
-    await createWeeklyPlan(new Date().toISOString(), dinnerPicks!, breakfastPicks!, lunchPicks);
+    await createWeeklyPlan(
+      new Date().toISOString(),
+      dinnerPicks!,
+      breakfastPicks!,
+      lunchPicks,
+      fruitMealIds,
+    );
   }
 
   return (
@@ -70,6 +78,8 @@ export function WeekPicker({
         <LunchPicker
           meals={lunchMeals}
           schoolLunchMenus={schoolLunchMenus}
+          kidNames={kidNames}
+          fruitMeals={fruitMeals}
           onDone={handleLunchesDone}
           onBack={() => setPhase("breakfasts")}
         />

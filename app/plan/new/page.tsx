@@ -26,7 +26,7 @@ function upcomingWeekdays(): Date[] {
 export default async function NewPlanPage() {
   const weekdayDates = upcomingWeekdays();
 
-  const [dinners, breakfasts, lunches, familyMembers, schoolLunchDays] = await Promise.all([
+  const [dinners, breakfasts, lunches, fruits, familyMembers, schoolLunchDays] = await Promise.all([
     prisma.meal.findMany({
       // Birthday Dinner is a future feature (MVP-SPEC) that replaces the normal 5-slot
       // week entirely — those meals shouldn't show up in the regular weekly rotation.
@@ -42,6 +42,11 @@ export default async function NewPlanPage() {
     prisma.meal.findMany({
       where: { mealType: "LUNCH" },
       include: MEAL_INCLUDE,
+      orderBy: { name: "asc" },
+    }),
+    prisma.meal.findMany({
+      // Single-ingredient "meals" backing the weekly fresh-fruit checklist under Lunches.
+      where: { mealType: "FRUIT" },
       orderBy: { name: "asc" },
     }),
     prisma.familyMember.findMany({ where: { memberType: "KID" }, orderBy: { sortOrder: "asc" } }),
@@ -69,6 +74,7 @@ export default async function NewPlanPage() {
         dinnerMeals={dinners}
         breakfastMeals={breakfasts}
         lunchMeals={lunches}
+        fruitMeals={fruits}
         kidNames={kidNames}
         schoolLunchMenus={schoolLunchMenus}
       />
