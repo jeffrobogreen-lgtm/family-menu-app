@@ -215,7 +215,14 @@ export function DinnerPicker({
                     />
                   )}
                   {ing.substituteGroup?.options
-                    .filter((opt) => opt.name !== ing.name)
+                    // Non-optional ingredients get their own name rendered as a separate
+                    // default chip just above (so we drop the matching group option here
+                    // to avoid a duplicate-looking chip). Optional ingredients don't get
+                    // that separate chip at all, so if we filtered here too, an optional
+                    // ingredient whose name matches one of its own group's options (e.g.
+                    // "french fries" as both the base ingredient and a starch-side choice)
+                    // would have no way to actually pick that option — bug fixed 2026-08-28.
+                    .filter((opt) => ing.optional || opt.name !== ing.name)
                     .map((opt) => (
                       <Chip
                         key={opt.id}
