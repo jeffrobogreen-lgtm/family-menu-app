@@ -25,6 +25,9 @@ enum MealType {
   DINNER
   BREAKFAST
   LUNCH // home-made lunch library — see SchoolLunchDay for the school cafeteria calendar
+  FRUIT // added 2026-08-27 — single-ingredient "meals" backing the weekly fresh-fruit
+  // checklist under Lunches (see PlanSlot.slotType FRUIT below). Modeled as a Meal so
+  // the existing shopping-list consolidation logic needs zero changes to pick these up.
 }
 
 enum SlotType {
@@ -34,6 +37,7 @@ enum SlotType {
   BIRTHDAY
   BREAKFAST
   LUNCH
+  FRUIT // added 2026-08-27 — one slot per fruit checked on the weekly fresh-fruit list
 }
 
 enum FamilyMemberType {
@@ -118,7 +122,9 @@ model PlanSlot {
   mealId             String?
   overriddenByParent Boolean    @default(false)
   chosenSubstitutes  String? // JSON string map: { mealIngredientId: chosenOptionName }
-  weekday            Int? // 0=Mon..4=Fri — used by LUNCH slots only, one per school day
+  weekday            Int? // 0=Mon..4=Fri — used by LUNCH slots only. Since 2026-08-27 each
+  // kid gets their own 5 LUNCH slots per week (pickedBy holds that kid's name), rather than
+  // one shared slot per weekday for the whole family.
   eatingAtSchool     Boolean    @default(false) // true = cafeteria lunch that day, mealId stays null
 }
 

@@ -24,6 +24,12 @@ async function main() {
 
   // --- Reusable substitution groups ---
 
+  // Updated 2026-08-27: every dinner's vegetable and starch side now draws from these
+  // same two shared groups (see "all sides/vegetables selectable for any dinner" below),
+  // instead of only the handful of meals that happened to be wired up to a group before.
+  // Also added "corn" and "carrots" to vegetable_side — MVP-SPEC's own substitution
+  // example ("broccoli → green beans, corn, carrots") named them, but they'd never
+  // actually been added as real options until now.
   const vegetableSide = await prisma.substituteGroup.create({
     data: {
       name: "vegetable_side",
@@ -33,29 +39,46 @@ async function main() {
           { name: "broccoli" },
           { name: "salad" },
           { name: "edamame" },
+          { name: "corn" },
+          { name: "carrots" },
+          { name: "bell peppers" },
         ],
       },
     },
   });
 
-  const starchPotato = await prisma.substituteGroup.create({
+  // Merged starch_potato + starch_rice into one starch_side group so any dinner's starch
+  // side can be swapped for any of these, not just whichever half (potato-ish vs. rice-ish)
+  // it originally shipped with. Also added "french fries" as a selectable side.
+  const starchSide = await prisma.substituteGroup.create({
     data: {
-      name: "starch_potato",
+      name: "starch_side",
       options: {
         create: [
           { name: "mashed potatoes" },
+          { name: "baked potato" },
           { name: "mac and cheese" },
+          { name: "fried rice" },
           { name: "sticky rice" },
+          { name: "french fries" },
         ],
       },
     },
   });
 
-  const starchRice = await prisma.substituteGroup.create({
+  // Pizza topping choices — see the "Pizza" dinner below, which now starts as plain
+  // cheese with these as optional add-on toppings instead of always including pepperoni.
+  const pizzaTopping = await prisma.substituteGroup.create({
     data: {
-      name: "starch_rice",
+      name: "pizza_topping",
       options: {
-        create: [{ name: "fried rice" }, { name: "sticky rice" }],
+        create: [
+          { name: "pepperoni" },
+          { name: "ham" },
+          { name: "sausage" },
+          { name: "pineapple" },
+          { name: "other" },
+        ],
       },
     },
   });
@@ -141,7 +164,7 @@ async function main() {
             unit: "cup",
             role: "starch_side",
             swappable: true,
-            substituteGroupId: starchPotato.id,
+            substituteGroupId: starchSide.id,
           },
           {
             name: "green beans",
@@ -172,7 +195,7 @@ async function main() {
             unit: "cup",
             role: "starch_side",
             swappable: true,
-            substituteGroupId: starchRice.id,
+            substituteGroupId: starchSide.id,
           },
           {
             name: "edamame",
@@ -237,7 +260,14 @@ async function main() {
             swappable: true,
             substituteGroupId: vegetableSide.id, // same group as meal 1 — "sub previous vegetable options"
           },
-          { name: "baked potato", quantity: 1, unit: "each", role: "starch_side", swappable: false },
+          {
+            name: "baked potato",
+            quantity: 1,
+            unit: "each",
+            role: "starch_side",
+            swappable: true,
+            substituteGroupId: starchSide.id,
+          },
         ],
       },
     },
@@ -726,7 +756,7 @@ async function main() {
 
   await prisma.meal.create({
     data: {
-      name: "Cheesy Beef Slider Burgers",
+      name: "Abb-Burger", // renamed from "Cheesy Beef Slider Burgers" on 2026-08-27
       mealType: "DINNER",
       tags: "kid-favorite,quick",
       photoUrl:
@@ -773,7 +803,7 @@ async function main() {
             unit: "cup",
             role: "starch_side",
             swappable: true,
-            substituteGroupId: starchPotato.id,
+            substituteGroupId: starchSide.id,
           },
         ],
       },
@@ -790,7 +820,14 @@ async function main() {
       ingredients: {
         create: [
           { name: "chicken breast, cubed", quantity: 1, unit: "lb", role: "protein", swappable: false },
-          { name: "baby potatoes, halved", quantity: 1.5, unit: "lb", role: "starch_side", swappable: false },
+          {
+            name: "baby potatoes, halved",
+            quantity: 1.5,
+            unit: "lb",
+            role: "starch_side",
+            swappable: true,
+            substituteGroupId: starchSide.id,
+          },
           { name: "cream sauce with herbs", quantity: 1, unit: "cup", role: "sauce", swappable: false },
           {
             name: "green beans",
@@ -841,9 +878,24 @@ async function main() {
       ingredients: {
         create: [
           { name: "smoked sausage, sliced", quantity: 1, unit: "lb", role: "protein", swappable: false },
-          { name: "baby potatoes, halved", quantity: 1.5, unit: "lb", role: "starch_side", swappable: false },
+          {
+            name: "baby potatoes, halved",
+            quantity: 1.5,
+            unit: "lb",
+            role: "starch_side",
+            swappable: true,
+            substituteGroupId: starchSide.id,
+          },
           { name: "canned beans, drained", quantity: 1, unit: "can", role: "main", swappable: false },
-          { name: "bell peppers, sliced", quantity: 1, unit: "cup", role: "vegetable_side", swappable: false, optional: true },
+          {
+            name: "bell peppers",
+            quantity: 1,
+            unit: "cup",
+            role: "vegetable_side",
+            swappable: true,
+            substituteGroupId: vegetableSide.id,
+            optional: true,
+          },
         ],
       },
     },
@@ -859,7 +911,14 @@ async function main() {
       ingredients: {
         create: [
           { name: "chicken breast", quantity: 1.5, unit: "lb", role: "protein", swappable: false },
-          { name: "long-grain rice, uncooked", quantity: 1.5, unit: "cup", role: "starch_side", swappable: false },
+          {
+            name: "long-grain rice, uncooked",
+            quantity: 1.5,
+            unit: "cup",
+            role: "starch_side",
+            swappable: true,
+            substituteGroupId: starchSide.id,
+          },
           { name: "cream of chicken soup", quantity: 2, unit: "can", role: "sauce", swappable: false },
           { name: "chicken broth", quantity: 2, unit: "cup", role: "main", swappable: false },
           {
@@ -867,7 +926,8 @@ async function main() {
             quantity: 1,
             unit: "cup",
             role: "vegetable_side",
-            swappable: false,
+            swappable: true,
+            substituteGroupId: vegetableSide.id,
             optional: true,
           },
         ],
@@ -887,7 +947,14 @@ async function main() {
           { name: "ground beef", quantity: 1, unit: "lb", role: "protein", swappable: false },
           { name: "taco seasoning (mild)", quantity: 1, unit: "packet", role: "seasoning", swappable: false },
           { name: "hard taco shells", quantity: 8, unit: "each", role: "bread", swappable: false },
-          { name: "corn kernels", quantity: 1, unit: "cup", role: "vegetable_side", swappable: false },
+          {
+            name: "corn",
+            quantity: 1,
+            unit: "cup",
+            role: "vegetable_side",
+            swappable: true,
+            substituteGroupId: vegetableSide.id,
+          },
           {
             name: "shredded cheese and lettuce",
             quantity: 1,
@@ -903,7 +970,13 @@ async function main() {
 
   await prisma.meal.create({
     data: {
-      name: "Pepperoni and Mozzarella Pizza",
+      // Renamed from "Pepperoni and Mozzarella Pizza" and reworked on 2026-08-27 to start
+      // as plain cheese, with toppings as an optional add-on (see pizza_topping group
+      // above) instead of always including pepperoni. Photo still shows a pepperoni pizza
+      // from the original Walmart import — the closest real photo available without a new
+      // live browsing pass; harmless mismatch since MealPhoto's SVG fallback would look
+      // worse than a real (if topping-mismatched) photo.
+      name: "Pizza",
       mealType: "DINNER",
       tags: "kid-favorite",
       photoUrl:
@@ -913,7 +986,15 @@ async function main() {
           { name: "pizza dough", quantity: 1, unit: "each", role: "base", swappable: false },
           { name: "pizza sauce", quantity: 0.75, unit: "cup", role: "sauce", swappable: false },
           { name: "shredded mozzarella cheese", quantity: 2, unit: "cup", role: "cheese", swappable: false },
-          { name: "pepperoni slices", quantity: 1, unit: "cup", role: "topping", swappable: false },
+          {
+            name: "topping",
+            quantity: 1,
+            unit: "cup",
+            role: "topping",
+            swappable: true,
+            optional: true, // not included by default — pizza starts as plain cheese
+            substituteGroupId: pizzaTopping.id,
+          },
         ],
       },
     },
@@ -968,7 +1049,7 @@ async function main() {
             unit: "cup",
             role: "starch_side",
             swappable: true,
-            substituteGroupId: starchPotato.id,
+            substituteGroupId: starchSide.id,
             optional: true,
           },
         ],
@@ -976,8 +1057,50 @@ async function main() {
     },
   });
 
+  // --- Added 2026-08-27 ---
+
+  await prisma.meal.create({
+    data: {
+      name: "Pita Pizzas",
+      mealType: "LUNCH",
+      tags: "kid-favorite,quick",
+      ingredients: {
+        create: [
+          { name: "pita bread", quantity: 2, unit: "each", role: "base", swappable: false },
+          { name: "mozzarella cheese", quantity: 0.5, unit: "cup", role: "cheese", swappable: false },
+          { name: "pizza sauce (Rao's)", quantity: 0.25, unit: "cup", role: "sauce", swappable: false },
+        ],
+      },
+    },
+  });
+
+  // Single-ingredient "meals" backing the weekly fresh-fruit checklist under Lunches —
+  // see MealType.FRUIT and SlotType.FRUIT in schema.prisma for why these are modeled as
+  // Meals rather than a one-off list: it means consolidateShoppingList needs no changes
+  // to pick these up once checked.
+  const fruits: { name: string; quantity: number; unit: string }[] = [
+    { name: "strawberries", quantity: 1, unit: "lb" },
+    { name: "watermelon", quantity: 1, unit: "each" },
+    { name: "grapes", quantity: 1, unit: "lb" },
+    { name: "apples", quantity: 1, unit: "lb" },
+    { name: "bananas", quantity: 1, unit: "bunch" },
+    { name: "kiwis", quantity: 1, unit: "lb" },
+  ];
+  for (const fruit of fruits) {
+    await prisma.meal.create({
+      data: {
+        name: fruit.name.charAt(0).toUpperCase() + fruit.name.slice(1),
+        mealType: "FRUIT",
+        tags: "",
+        ingredients: {
+          create: [{ name: fruit.name, quantity: fruit.quantity, unit: fruit.unit, swappable: false }],
+        },
+      },
+    });
+  }
+
   console.log(
-    "Seed complete: 17 dinners, 7 breakfasts, 8 lunches, 10 substitute groups (16 recipes sourced from Walmart's recipe library across two rounds).",
+    "Seed complete: 18 dinners, 7 breakfasts, 9 lunches, 6 fruit options, 12 substitute groups (16 recipes sourced from Walmart's recipe library across two rounds).",
   );
 }
 
